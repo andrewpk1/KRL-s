@@ -10,16 +10,31 @@ A first ruleset for the Quickstart
   }
   
   global {
+
     hello = function(obj) {
       msg = "Hello " + obj;
       msg
     }
+
     __testing = { "queries": [ { "name": "hello", "args": [ "obj" ] },
                            { "name": "__testing" } ],
               "events": [ { "domain": "echo", "type": "hello", "attrs": ["id"] }, { "domain": "hello", "type": "name", "attrs": [ "id", "first_name", "last_name" ] },
               { "domain": "hello", "type" : "clear" } ]
             }
+
     clear_name = { "_0": { "name": { "first": "GlaDOS", "last": "" } } }
+
+    name = function(id){
+      all_users = users();
+      nameObj = id => all_users{[id,"name"]} | {"first" : "HAL", "last": "9000"};
+      first = nameObj{"first"};
+      last = nameObj{"last"};
+      first + " " + last
+    }
+
+    users = function(){
+      ent:name
+    }
   }
   
   rule hello_world {
@@ -52,6 +67,7 @@ A first ruleset for the Quickstart
       ent:name{[passed_id,"name","last"]} := passed_last_name
     }
   }
+  
   rule clear_names {
     select when hello clear
     always {
