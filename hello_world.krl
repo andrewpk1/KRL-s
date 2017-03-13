@@ -41,13 +41,15 @@ A first ruleset for the Quickstart
     select when echo hello
     pre {
       id = event:attr("id").defaultsTo("_0")
-      first = ent:name{[id,"name","first"]}
-      last = ent:name{[id,"name","last"]}
-      name = first + " " + last
+      name = name(id)
+      visits = ent:name{[id,"visits"]}
       
     }
     send_directive("say") with
       something = "Hello " + name
+    fired{
+      ent:name{[id,"visits"]} := visits + 1
+    }
   }
 
   rule store_name {
@@ -67,7 +69,7 @@ A first ruleset for the Quickstart
       ent:name{[passed_id,"name","last"]} := passed_last_name
     }
   }
-  
+
   rule clear_names {
     select when hello clear
     always {
