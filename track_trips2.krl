@@ -10,10 +10,10 @@ ruleset track_trips {
   	}
 	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
-	    			 "events": [{"domain" : "echo", "type" : "message", "attrs": ["mileage"]}]}
+	    			 "events": [{"domain" : "car", "type" : "new_trip", "attrs": ["mileage"]}]}
 	}
 	rule process_trip{
-		select when echo message
+		select when car new_trip
 		pre{
 			passed_mileage =  event:attr("mileage").klog("our passed in mileage: ")
 		}
