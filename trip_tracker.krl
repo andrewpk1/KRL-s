@@ -33,9 +33,6 @@ ruleset trip_tracker {
 			event_attributes = event:attrs()
 			is_long_trip = passed_mileage > long_trip
 		}
-		if is_long_trip then {
-
-		}
 		fired{
 			raise explicit event "found_long_trip"
 				attributes event_attributes
