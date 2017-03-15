@@ -1,12 +1,12 @@
-ruleset track_trips {
+ruleset trip_store {
   	meta {
-	    name "track_trips"
+	    name "trip_store"
 	    description <<
 	A second Basic ruleset for part 1 of the pico Lab
 	>>
 	    author "Andrew King"
 	    logging on
-	    shares __testing, trip_collector
+	    shares __testing, trip_collector, id
   	}
   	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
@@ -24,6 +24,6 @@ ruleset track_trips {
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
       		ent:trips{[id,"mileage"]} := passed_mileage;
       		id = id + 1
-    	}
+		}
 	}
  }
