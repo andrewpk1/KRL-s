@@ -24,9 +24,9 @@ ruleset trip_store {
 		}
 		always{
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
-      		ent:trips{[id,"mileage"]} := passed_mileage;
-      		ent:trips{[id,"timestamp"]} := timestamp;
-      		id = id + 1
+      		ent:trips{[trip_id,"mileage"]} := passed_mileage;
+      		ent:trips{[trip_id,"timestamp"]} := timestamp;
+      		trip_id = trip_id + 1
 		}
 	}
 
@@ -35,6 +35,11 @@ ruleset trip_store {
 		pre{
 			passed_mileage = event:attr("mileage").klog("our passed in mileage: ")
 		}
-
+		always{
+			ent:long_trips := ent:long_trips.defaultsTo(clear_long_trip, "initilization was needed");
+			ent:long_trips{[long_trip_id,"mileage"]} := passed_mileage;
+			ent:long_trips{[long_trip_id,"timestamp"]} := timestamp;
+			long_trip_id = long_trip_id + 1
+		}
 	}
  }
