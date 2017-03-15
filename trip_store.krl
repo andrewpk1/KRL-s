@@ -35,7 +35,7 @@ ruleset trip_store {
 	rule collect_long_trips{
 		select when explicit found_long_trip
 		pre{
-			passed_mileage = event:attr("mileage").klog("our passed in mileage: ")
+			passed_mileage = event:attr("mileage").klog("our passed in long mileage to be stored: ")
 		}
 		always{
 			ent:long_trips := ent:long_trips.defaultsTo(clear_long_trip, "initilization was needed");
