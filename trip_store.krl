@@ -23,12 +23,12 @@ ruleset trip_store {
 		select when explicit trip_processed
 		pre{
 			passed_mileage = event:attr("mileage").klog("our passed in mileage to be stored: ")
+			trip_id = trip_id + 1
 		}
 		always{
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
       		ent:trips{[trip_id,"mileage"]} := passed_mileage;
       		ent:trips{[trip_id,"timestamp"]} := timestamp;
-      		trip_id = trip_id + 1
 		}
 	}
 
