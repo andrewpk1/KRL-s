@@ -22,7 +22,7 @@ ruleset trip_store {
 	rule collect_trips{
 		select when explicit trip_processed
 		pre{
-			passed_mileage = event:attr("mileage").klog("our passed in mileage: ")
+			passed_mileage = event:attr("mileage").klog("our passed in mileage to be stored: ")
 		}
 		always{
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
