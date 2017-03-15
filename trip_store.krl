@@ -10,10 +10,12 @@ ruleset trip_store {
   	}
   	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
-	    			 "events": [{"domain" : "echo", "type" : "message", "attrs": ["mileage"]}]}
+	    			 "events": [{"domain" : "car", "type" : "trips_reset"}]}
 
 	    clear_trip = { "_0": { "mileage": "0".as("Number"), "timestamp" : timestamp } }
+
 	    clear_long_trip = { "_0": { "mileage": "0".as("Number"), "timestamp" : timestamp } }
+
 	    trip_id = "0".as("Number")
 	    long_trip_id = "0".as("Number")
 	}
@@ -40,6 +42,13 @@ ruleset trip_store {
 			ent:long_trips{[long_trip_id,"mileage"]} := passed_mileage;
 			ent:long_trips{[long_trip_id,"timestamp"]} := timestamp;
 			long_trip_id = long_trip_id + 1
+		}
+	}
+	rule clear_trips{
+		select when car trip_reset
+		always {
+      		ent:trips := clear_trips;
+      		ent:long_trips := clear_long_trips
 		}
 	}
  }
