@@ -25,7 +25,7 @@ ruleset trip_store {
 		}
 		always{
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
-      		ent:trip_id = ent:trip_id.defaultsTo(ent:clear_id,"initializing trip_id");
+      		ent:trip_id := ent:trip_id.defaultsTo(ent:clear_id,"initializing trip_id");
       		ent:trips{[ent:trip_id["trip_id"],"mileage"]} := passed_mileage;
       		ent:trips{[ent:trip_id["trip_id"],"timestamp"]} := timestamp;
       		ent:trip_id{["trip_id"]} := ent:trip_id{["trip_id"]} + 1
@@ -41,7 +41,7 @@ ruleset trip_store {
 			ent:long_trips := ent:long_trips.defaultsTo(clear_long_trip, "initilization was needed");
 			ent:long_trip_id := ent:long_trip_id.defaultsTo(0, "initializing long_trip_id");
 			ent:long_trips{[ent:long_trip_id,"mileage"]} := passed_mileage;
-			ent:long_trips{[ent:long_trip_id,"timestamp"]} := timestamp
+			ent:long_trips{[ent:long_trip_id,"timestamp"]} := timestamp;
 			ent:long_trip_id := ent:long_trip_id + 1
 		}
 	}
