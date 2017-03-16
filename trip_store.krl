@@ -15,6 +15,8 @@ ruleset trip_store {
 	    clear_trip = { "_0": { "mileage": "0".as("Number"), "timestamp" : timestamp } }
 
 	    clear_long_trip = { "_0": { "mileage": "0".as("Number"), "timestamp" : timestamp } }
+
+	   clear_id= { "_0": { "trip_id": "0".as("Number"), "long_trip_id" : "0".as("Number") } }
 	}
 	rule collect_trips{
 		select when explicit trip_processed
@@ -23,10 +25,10 @@ ruleset trip_store {
 		}
 		always{
       		ent:trips := ent:trips.defaultsTo(clear_trip,"initialization was needed");
-      		ent:trip_id := ent:trip_id.defaultsTo(0,"initializing trip_id");
-      		ent:trips{[ent:trip_id,"mileage"]} := passed_mileage;
-      		ent:trips{[ent:trip_id,"timestamp"]} := timestamp;
-      		ent:trip_id := ent:trip_id + 1
+      		ent:trip_id = ent:trip_id.defaultsTo(ent:clear_id,"initializing trip_id");
+      		ent:trips{[ent:trip_id["trip_id"],"mileage"]} := passed_mileage;
+      		ent:trips{[ent:trip_id["trip_id"],"timestamp"]} := timestamp;
+      		ent:trip_id{["trip_id"]} := ent:trip_id{["trip_id"]} + 1
 		}
 	}
 
@@ -34,13 +36,12 @@ ruleset trip_store {
 		select when explicit found_long_trip
 		pre{
 			passed_mileage = event:attr("mileage").klog("our passed in long mileage to be stored: ")
-			long_trip_id = ent:long_trip_id + 1
 		}
 		always{
 			ent:long_trips := ent:long_trips.defaultsTo(clear_long_trip, "initilization was needed");
 			ent:long_trip_id := ent:long_trip_id.defaultsTo(0, "initializing long_trip_id");
 			ent:long_trips{[ent:long_trip_id,"mileage"]} := passed_mileage;
-			ent:long_trips{[ent:long_trip_id,"timestamp"]} := timestamp;
+			ent:long_trips{[ent:long_trip_id,"timestamp"]} := timestamp
 			ent:long_trip_id := ent:long_trip_id + 1
 		}
 	}
