@@ -31,10 +31,7 @@ ruleset trip_store {
 
 		short_trips = function(){
 			trips = ent:trips.defaultsTo(clear_trip,"ent:trips was empty");
-			short_trips = trips.filter(function(k,v){
-				k{["mileage"]} < long_trip
-			});
-
+			short_trips = trips.difference(ent:long_trips.defaultsTo(clear_long_trip, "ent:long_trips was empty"));
 			short_trips
 		}
 	}
