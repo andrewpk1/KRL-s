@@ -18,12 +18,14 @@ ruleset trip_tracker {
 		pre{
 			passed_mileage =  event:attr("mileage").klog("our passed in mileage: ")
 			event_attributes = event:attrs()
+			timestamp = {"timestamp" : time:now()}
+			new_attributes = event_attributes.put(timestamp)
 		}
 		send_directive("trip") with
 			trip_length = passed_mileage + " miles"
 		fired{
 			raise explicit event "trip_processed"
-				attributes event_attributes
+				attributes new_attributes
 		}
 	}
 	rule find_long_trips{
@@ -31,11 +33,13 @@ ruleset trip_tracker {
 		pre{
 			passed_mileage = event:attr("mileage").klog("our passed in mileage: ")
 			event_attributes = event:attrs()
+			timestamp = {"timestamp" : time:now()}
+			new_attributes = event_attributes.put(timestamp)
 			is_long_trip = passed_mileage > long_trip
 		}
 		fired{
 			raise explicit event "found_long_trip"
-				attributes event_attributes
+				attributes new_attributes
 			if (is_long_trip)
 		}
 	}
