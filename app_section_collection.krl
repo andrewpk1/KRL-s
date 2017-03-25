@@ -31,7 +31,7 @@ ruleset app_section_collection {
     		send_directive("section_ready")
       			with section_id = section_id
 	}
-	
+
 	rule section_needed {
   		select when section needed
   		pre {
@@ -56,7 +56,10 @@ ruleset app_section_collection {
 	  	}
 		if section_id.klog("found section_id")
 			then
-				noop()
+				event:send(
+   					{ "eci": the_section.eci, "eid": "install-ruleset",
+     				"domain": "pico", "type": "new_ruleset",
+     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/app_section_collection.krl", "section_id": section_id } } )
 		fired {
 	    	ent:sections := ent:sections.defaultsTo({});
 	    	ent:sections{[section_id]} := the_section
