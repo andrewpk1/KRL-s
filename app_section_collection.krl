@@ -13,11 +13,25 @@ ruleset app_section_collection {
 	    __testing = {"queries":[{ "name": "__testing" }],
 	    			 "events": [{ "domain":  "section", "type" : "needed", "attrs":["section_id"]},
 	    			 {"domain" : "collection","type": "empty"}]}
+	    
 	    nameFromID = function(section_id) {
   			"Section " + section_id + " Pico"
+		
 		}
+
 		showChildren = function() {
   			wrangler:children()
+		}
+
+		childFromID = function(section_id){
+			exists = ent:sections >< section_id
+			if not exists
+				then
+					noop()
+			else{
+				section = ent:sections["section_id"]
+			}
+			section
 		}
 	}
 
@@ -66,7 +80,24 @@ ruleset app_section_collection {
 	 	}
 	}
 
-	
+	rule section_offline {
+  		select when section offline
+  		pre {
+    		section_id = event:attr("section_id")
+    		exists = ent:sections >< section_id
+    		eci = meta:eci
+    		child_to_delete = childFromID(section_id)
+  		}
+  		if exists then
+    		send_directive("section_deleted")
+      		with section_id = section_id
+  		fired {
+    		raise pico event "delete_child_request"
+      			attributes child_to_delete;
+    		ent:sections{[section_id]} := null
+  		}
+	}
+
 	rule collection_empty {
   		select when collection empty
   		always {
