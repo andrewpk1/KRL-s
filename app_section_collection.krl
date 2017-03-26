@@ -12,7 +12,8 @@ ruleset app_section_collection {
 	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
 	    			 "events": [{ "domain":  "section", "type" : "needed", "attrs":["section_id"]},
-	    			 {"domain" : "collection","type": "empty"}]}
+	    			 {"domain" : "collection","type": "empty"},
+	    			 {"domain" : "section", "type": "offline", "attrs":["section_id"]}]}
 	    
 	    nameFromID = function(section_id) {
   			"Section " + section_id + " Pico"
@@ -24,14 +25,7 @@ ruleset app_section_collection {
 		}
 
 		childFromID = function(section_id){
-			exists = ent:sections >< section_id
-			if not exists
-				then
-					noop()
-			else{
-				section = ent:sections["section_id"]
-			}
-			section
+			ent:sections[section_id]
 		}
 	}
 
