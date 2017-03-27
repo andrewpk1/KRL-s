@@ -12,10 +12,11 @@ ruleset manage_fleet {
 	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
 	    			 "events": [{ "domain":  "car", "type" : "new_vehicle", "attrs":["vehicle_name"]},
-	    			 {"domain": "collection", "type" : "empty"}]}
+	    			 {"domain": "collection", "type" : "empty"},
+	    			 {"domain": "car", "type" : "unneeded_vehicle", "attrs":["vehicle_name"]}]}
 	    
 	    nameFromName = function(vehicle_name) {
-  			vehicle_name + " Pico"
+  			vehicle_name
 		
 		}
 
@@ -24,6 +25,9 @@ ruleset manage_fleet {
 		}
 
 		vehicleByName = function(vehicle_name){
+			ent:vehicles[vehicle_name]
+		}
+		childFromName = function(vehicle_name){
 			ent:vehicles[vehicle_name]
 		}
 	}
@@ -58,23 +62,39 @@ ruleset manage_fleet {
 				event:send(
    					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
      				"domain": "pico", "type": "new_ruleset",
-     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_tracker.krl", "vehicle_name": vehicle_name } } )
+     				"attrs": { "base": meta:rulesetURI, 
+     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_tracker.krl", 
+     					"vehicle_name": vehicle_name } } )
      			event:send(
    					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
      				"domain": "pico", "type": "new_ruleset",
-     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_store.krl", "vehicle_name": vehicle_name } } )
+     				"attrs": { "base": meta:rulesetURI, 
+     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_store.krl", 
+     					"vehicle_name": vehicle_name } } )
 		fired {
 	    	ent:vehicles := ent:vehicles.defaultsTo({});
-	    	ent:vehicles{[vehicle_name]} := the_vehicle;
-	    	raise wrangler event "subscription"
-    			with 
-    				name = vehicle_name
-         			name_space = "fleet"
-         			my_role = "fleet"
-         			subscriber_role = "vehicle"
-         			channel_type = "subscription"
-         			subscriber_eci = the_vehicle.eci
+	    	ent:vehicles{[vehicle_name]} := the_vehicle
 	 	}
+	}
+
+	rule subscription_added {
+		select when pico ruleset_added
+		pre{
+			the_vehicle = event:attr("new_child")
+			vehicle_name = event:attr("rs_attrs"){"vehicle_name"}
+		}
+		if vehicle_name.klog("ruleset_added vehicle name:")
+			then
+				noop()
+		fired{
+			raise wrangler event "subscription"
+    			with name = vehicle_name
+         			 name_space = "fleet"
+         			 my_role = "controller"
+         			 subscriber_role = "vehicle"
+         			 channel_type = "subscription"
+         			 subscriber_eci = the_vehicle.eci
+		}
 	}
 
 	rule delete_vehicle {
@@ -84,13 +104,17 @@ ruleset manage_fleet {
     		exists = ent:vehicles >< vehicle_name
     		eci = meta:eci
     		child_to_delete = childFromName(vehicle_name)
-  		}
+    		sub_name = "fleet:" + vehicle+name
+ 		}
   		if exists then
     		send_directive("vehicle_deleted")
       		with vehicle_name = vehicle_name
   		fired {
-    		raise pico event "delete_child_request"
+  		    child_to_delete.klog("child that is getting deleted:");
+  		    raise pico event "delete_child_request"
       			attributes child_to_delete;
+  			raise wrangler event "subscription_cancellation"
+  				with subscription_name = "fleet:" + vehicle_name;
     		ent:vehicles{[vehicle_name]} := null
   		}
 	}
