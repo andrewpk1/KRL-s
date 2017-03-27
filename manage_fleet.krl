@@ -12,7 +12,7 @@ ruleset manage_fleet {
 	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
 	    			 "events": [{ "domain":  "car", "type" : "new_vehicle", "attrs":["vehicle_name"]},
-	    			 {"domain": collection, "type" : empty}]}
+	    			 {"domain": "collection", "type" : "empty"}]}
 	    
 	    nameFromName = function(vehicle_name) {
   			vehicle_name + " Pico"
@@ -40,8 +40,9 @@ ruleset manage_fleet {
       			with vehicle_name = vehicle_name
   		fired {
   		} else {
+  		vehicle_name.klog("this is the vehicle name:");
     		raise pico event "new_child_request"
-      			attributes { "dname": nameFromID(section_id), "color": "#FF69B4" }
+      			attributes { "dname": nameFromName(vehicle_name), "color": "#FF69B4", "vehicle_name" : vehicle_name }
   		}
 	}
 
@@ -52,15 +53,27 @@ ruleset manage_fleet {
 	    	the_vehicle = event:attr("new_child")
 	    	vehicle_name = event:attr("rs_attrs"){"vehicle_name"}
 	  	}
-		if vehicle_name.klog("found vehicle_name")
+		if vehicle_name.klog("found vehicle_name: ")
 			then
 				event:send(
    					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
      				"domain": "pico", "type": "new_ruleset",
-     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/app_section_collection.krl", "vehicle_name": vehicle_name } } )
+     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_tracker.krl", "vehicle_name": vehicle_name } } )
+     			event:send(
+   					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
+     				"domain": "pico", "type": "new_ruleset",
+     				"attrs": { "base": meta:rulesetURI, "url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_store.krl", "vehicle_name": vehicle_name } } )
 		fired {
 	    	ent:vehicles := ent:vehicles.defaultsTo({});
-	    	ent:vehicles{[vehicle_name]} := the_vehicle
+	    	ent:vehicles{[vehicle_name]} := the_vehicle;
+	    	raise wrangler event "subscription"
+    			with 
+    				name = vehicle_name
+         			name_space = "fleet"
+         			my_role = "fleet"
+         			subscriber_role = "vehicle"
+         			channel_type = "subscription"
+         			subscriber_eci = the_vehicle.eci
 	 	}
 	}
 
