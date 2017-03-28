@@ -6,6 +6,7 @@ ruleset trip_tracker {
 	>>
 	    author "Andrew King"
 	    logging on
+	    use module io.picolabs.pico alias wrangler
 	    shares long_trip,__testing
   	}
 	global {
@@ -43,7 +44,38 @@ ruleset trip_tracker {
 			if (is_long_trip)
 		}
 	}
-	
+
+	rule trip_tracker_added{
+		select when pico ruleset_added
+		pre{
+			name = event:attr("name")
+			vehicle_name = event:attr("vehicle_name")
+			parent_eci = wrangler:parent().eci
+			child_eci = wrangler:myself().eci
+		}
+		if name == "trip_tracker"
+			then
+				event:send(
+   				{ "eci": parent_eci, "eid": "subscription_module_needed",
+     				"domain": "child", "type": "subscription_module_needed",
+     				"attrs": { "eci_to_use": child_eci, "vehicle_name" : vehicle_name} } )
+	}
+	rule subscription_added{
+		select when pico ruleset_added
+		pre{
+			name = event:attr("name")
+			vehicle_name = event:attr("vehicle_name")
+			parent_eci = wrangler:parent().eci
+			child_eci = wrangler:myself().eci
+		}
+		if name != "trip_tracker" || "trip_store"
+			then
+			    event:send(
+   				{ "eci": parent_eci, "eid": "send_subscription",
+     				"domain": "child", "type": "send_subscription",
+     				"attrs": { "eci_to_use": child_eci, "vehicle_name" : vehicle_name} } )
+
+	}
 	rule auto_accept {
     	select when wrangler inbound_pending_subscription_added
     	pre {

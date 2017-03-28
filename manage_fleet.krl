@@ -27,6 +27,7 @@ ruleset manage_fleet {
 		vehicleByName = function(vehicle_name){
 			ent:vehicles[vehicle_name]
 		}
+
 		childFromName = function(vehicle_name){
 			ent:vehicles[vehicle_name]
 		}
@@ -59,17 +60,11 @@ ruleset manage_fleet {
 	  	}
 		if vehicle_name.klog("found vehicle_name: ")
 			then
-				event:send(
-   					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
-     				"domain": "pico", "type": "new_ruleset",
-     				"attrs": { "base": meta:rulesetURI, 
-     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_tracker.krl", 
-     					"vehicle_name": vehicle_name } } )
      			event:send(
-   					{ "eci": the_vehicle.eci, "eid": "install-ruleset",
+   					{ "eci": the_vehicle.eci, "eid": "install-trip-tracker",
      				"domain": "pico", "type": "new_ruleset",
-     				"attrs": { "base": meta:rulesetURI, 
-     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_store.krl", 
+     				"attrs": { "name": "trip_tracker", 
+     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_tracker.krl", 
      					"vehicle_name": vehicle_name } } )
 		fired {
 	    	ent:vehicles := ent:vehicles.defaultsTo({});
@@ -77,24 +72,42 @@ ruleset manage_fleet {
 	 	}
 	}
 
-	rule subscription_added {
-		select when pico ruleset_added
+	rule subscription_module{
+		select when child subscription_module_needed
 		pre{
-			the_vehicle = event:attr("new_child")
-			vehicle_name = event:attr("rs_attrs"){"vehicle_name"}
+			child_eci = event:attr("eci_to_use")
+			vehicle_name = event:attr("vehicle_name")
 		}
-		if vehicle_name.klog("ruleset_added vehicle name:")
+		if child_eci.klog("child to send too:")
 			then
-				noop()
+				event:send(
+   				{ "eci": child_eci, "eid": "install-ruleset",
+     				"domain": "pico", "type": "new_ruleset",
+     				"attrs": { "rid": "Subscriptions", "name": "Subscriptions", "vehicle_name": vehicle_name } } )
+	}
+	rule subscription_added {
+		select when child send_subscription
+		pre{
+			child_eci = event:attr("eci_to_use")
+			vehicle_name = event:attr("vehicle_name")
+		}
+		if vehicle_name.klog("final vehicle name to add subscription too:")
+			then
+			    event:send(
+   					{ "eci": child_eci, "eid": "install-trip-store",
+     				"domain": "pico", "type": "new_ruleset",
+     				"attrs": { "name": "trip_store", 
+     					"url": "https://raw.githubusercontent.com/andrewpkbyu/KRL-s/master/trip_store.krl", 
+     					"vehicle_name": vehicle_name } } )
 		fired{
 			raise wrangler event "subscription"
-    			with name = vehicle_name
-         			 name_space = "fleet"
-         			 my_role = "controller"
-         			 subscriber_role = "vehicle"
-         			 channel_type = "subscription"
-         			 subscriber_eci = the_vehicle.eci
-		}
+				with name = vehicle_name
+     			name_space = "fleet"
+     			my_role = "fleet"
+     			subscriber_role = "vehicle"
+     			channel_type = "subscription"
+     			subscriber_eci = child_eci
+        }
 	}
 
 	rule delete_vehicle {
