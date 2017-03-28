@@ -85,6 +85,7 @@ ruleset manage_fleet {
      				"domain": "pico", "type": "new_ruleset",
      				"attrs": { "rid": "Subscriptions", "name": "Subscriptions", "vehicle_name": vehicle_name } } )
 	}
+	
 	rule subscription_added {
 		select when child send_subscription
 		pre{
