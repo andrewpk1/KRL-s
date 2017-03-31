@@ -60,7 +60,6 @@ ruleset trip_tracker {
      				"domain": "child", "type": "subscription_module_needed",
      				"attrs": { "eci_to_use": child_eci, "vehicle_name" : vehicle_name} } )
 	}
-	
 	rule initialization_complete{
 		select when pico ruleset_added
 		pre{

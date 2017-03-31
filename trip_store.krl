@@ -6,12 +6,14 @@ ruleset trip_store {
 	>>
 	    author "Andrew King"
 	    logging on
+	    use module io.picolabs.pico alias wrangler
 	    shares __testing, long_trip, trips, long_trips, short_trips
 	    provides trips, short_trips, long_trips
   	}
   	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
-	    			 "events": [{"domain" : "car", "type" : "trip_reset"}]}
+	    			 "events": [{"domain" : "car", "type" : "trip_reset"}, 
+	    			 {"domain" : "clear", "type" : "seq"}]}
 
 	    clear_trip = { "0": { "mileage": "0".as("Number"), "timestamp" : timestamp } }
 
@@ -21,8 +23,10 @@ ruleset trip_store {
 
 	    long_trip = "100".as("Number")
 
+	    clear_seq = {"_0": {"seq" : "0".as("Number")}}
+
 	    trips = function(){
-      		ent:trips
+      		ent:trips.defaultsTo({},"ent:trips was empty")
 		}
 
 		long_trips = function(){
@@ -31,10 +35,34 @@ ruleset trip_store {
 
 		short_trips = function(){
 			trips = ent:trips.defaultsTo(clear_trip,"ent:trips was empty");
-			short_trips = trips.difference(ent:long_trips.defaultsTo(clear_long_trip, "ent:long_trips was empty"));
+			short_trips = trips.filter(function(v){
+ 				v{["mileage"]} < long_trip
+ 			});
 			short_trips
 		}
 	}
+
+	rule report_requested{
+		select when report request
+		pre{
+			child_eci = wrangler:myself().eci
+			parent_eci = wrangler:parent().eci
+			myTrips = trips()
+			seq = ent:seq{["_0","seq"]}
+			cor_id = wrangler:myself().eci + "_" + seq.defaultsTo("0".as("Number"), "defaulting to 0")
+		}
+		if cor_id.klog("request sent from this cor_id: ")
+			then
+				event:send(
+   					{ "eci": parent_eci, "eid": "returning report",
+     				"domain": "child", "type": "reporting",
+     				"attrs": { "cor_id": cor_id, "trips" : myTrips} } )
+        always{
+        	ent:seq := ent:seq.defaultsTo("clear_seq", "initializing sequence");
+        	ent:seq{["_0","seq"]} := ent:seq{["_0","seq"]} + 1 
+        }                              
+	}
+
 	rule collect_trips{
 		select when explicit trip_processed
 		pre{
@@ -77,6 +105,12 @@ ruleset trip_store {
 			ent:trips := clear_trip;
 			ent:long_trips := clear_long_trips;
 			ent:trip_id := clear_id
+		}
+	}
+	rule clear_seq{
+		select when clear seq
+		always{
+			ent:seq := clear_seq;
 		}
 	}
  }

@@ -6,18 +6,26 @@ ruleset manage_fleet {
 	>>
 	    author "Andrew King"
 	    logging on
-	    shares __testing
+	    shares __testing, nameFromName, showChildren, vehicleByName, childFromName, fleet_report, vehicles, clear_reports
+	    provides __testing, nameFromName, showChildren, vehicleByName, childFromName, fleet_report, vehicles
+	    use module Subscriptions
 	    use module io.picolabs.pico alias wrangler
   	}
 	global {
 	    __testing = {"queries":[{ "name": "__testing" }],
-	    			 "events": [{ "domain":  "car", "type" : "new_vehicle", "attrs":["vehicle_name"]},
-	    			 {"domain": "collection", "type" : "empty"},
-	    			 {"domain": "car", "type" : "unneeded_vehicle", "attrs":["vehicle_name"]}]}
-	    
-	    nameFromName = function(vehicle_name) {
+	    			"events": [{ "domain":  "car", "type" : "new_vehicle", "attrs":["vehicle_name"]},
+	    			{"domain": "collection", "type" : "empty"},
+	    			{"domain": "car", "type" : "unneeded_vehicle", "attrs":["vehicle_name"]},
+	    			{"domain": "report", "type": "func"},
+	    			{"domain": "vehicles", "type": "func"},
+	    			{"domain": "report", "type" : "begin"},
+	    			{"domain": "last_5", "type" : "func"}]}
+
+	    clear_reports = {} 
+
+	    nameFromName = function(vehicle_name) {	    
+
   			vehicle_name
-		
 		}
 
 		showChildren = function() {
@@ -30,6 +38,39 @@ ruleset manage_fleet {
 
 		childFromName = function(vehicle_name){
 			ent:vehicles[vehicle_name]
+		}
+
+		vehicles = function(){
+			relevant_vehicles = Subscriptions:getSubscriptions().filter(function(v){v{"attributes"}{"subscriber_role"} == "vehicle"});
+			relevant_vehicles
+		}
+		
+		fleet_report = function(){
+			relevant_subs = vehicles();
+			report = relevant_subs.map(function(v){
+				Subscriptions:skyQuery(v{"attributes"}{"subscriber_eci"}, "trip_store","trips", {})
+			});
+			report
+		}
+
+		create_report = function(id, trips){
+			inner_report = {"vehicles" : vehicles().keys().length(),
+                			"responding" : 0,
+                			"trips" : trips};
+            inner_report.klog("I am an inner report: ");
+            trip_no = id.split(re#_#)[1];
+            trip_no = "report_" + trip_no;
+            trip_no.klog("I am the trip_no: ");
+			report = {}.put(id,inner_report);
+			report.klog("I am a report: ");
+            report
+		}
+
+		last_5 = function(){
+			len = ent:reports.keys().length();
+			reports = 
+				(len <= 5) => ent:reports
+                   | {}.push(ent:reports{ent:reports.keys()[len]}).push(ent:reports{ent:reports.keys()[len-1]}).push(ent:reports{ent:reports.keys()[len-2]}).push(ent:reports{ent:reports.keys()[len-3]}).push(ent:reports{ent:reports.keys()[len-4]})
 		}
 	}
 
@@ -85,7 +126,7 @@ ruleset manage_fleet {
      				"domain": "pico", "type": "new_ruleset",
      				"attrs": { "rid": "Subscriptions", "name": "Subscriptions", "vehicle_name": vehicle_name } } )
 	}
-	
+
 	rule subscription_added {
 		select when child send_subscription
 		pre{
@@ -133,10 +174,82 @@ ruleset manage_fleet {
   		}
 	}
 
+	rule start_fleet_report{
+		select when report begin
+		foreach vehicles() setting(vehicle)
+		pre{
+			child_eci = vehicle{"attributes"}{"subscriber_eci"}
+		}
+		if child_eci.klog("sending event to child: ")
+			then
+				event:send(
+   					{ "eci": child_eci, "eid": "fleet request",
+   					"domain": "report", "type": "request",
+   					"attrs": { "name": "report_request" } } )
+	}
+
+	rule report_incoming {
+		select when child reporting
+		pre{
+			id = event:attr("cor_id")
+			trips = event:attr("trips")
+			report = create_report(id, trips)
+			trip_no = id.split(re#_#)[1]
+            trip_no = "report_" + trip_no
+		}
+	    always{
+	    	ent:reports := ent:reports.defaultsTo(clear_reports, "initializing reports");
+	    	ent:reports := ent:reports.put([trip_no], report);
+	    	ent:reports.klog("report:");
+	    	raise increment event "report"
+	    		attributes {"trip_no" : trip_no}
+
+	    }
+	}
+
+	rule increment_report{
+		select when increment report
+		foreach ent:reports{event:attr("trip_no")}.keys() setting (key)
+			pre{
+				trip_no = event:attr("trip_no")
+			}
+			always{
+				key.klog("foreaching with this key:");
+				ent:reports{[trip_no, key, "responding"]} := ent:reports{trip_no}.keys().length()
+			}
+	}
 	rule collection_empty {
   		select when collection empty
   		always {
     		ent:vehicles := {}
   		}
+	}
+
+	rule test_report_func {
+		select when report func
+		pre{
+			report = fleet_report()
+		}
+		if report.klog("this is the returned information:")
+			then
+				noop()
+	}
+	rule test_vehicles_func {
+		select when vehicles func
+		pre{
+			relevant_vehicles = vehicles()
+		}
+		if relevant_vehicles.klog("this is the subscribed vehicles")
+			then
+				noop()
+	}
+	rule test_last_5_func {
+		select when last_5 func
+		pre{
+			last5 = last_5()
+		}
+		if last5.klog("this is the last 5 reports up in here")
+			then
+				noop()
 	}
 }
