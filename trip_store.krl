@@ -110,7 +110,7 @@ ruleset trip_store {
 	rule clear_seq{
 		select when clear seq
 		always{
-			ent:seq := clear_seq;
+			ent:seq := clear_seq
 		}
 	}
  }
