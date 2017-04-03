@@ -6,7 +6,7 @@ ruleset manage_fleet {
 	>>
 	    author "Andrew King"
 	    logging on
-	    shares __testing, nameFromName, showChildren, vehicleByName, childFromName, fleet_report, vehicles, clear_reports
+	    shares __testing, nameFromName, showChildren, vehicleByName, childFromName, fleet_report, vehicles, clear_reports, last_5, clear_report
 	    provides __testing, nameFromName, showChildren, vehicleByName, childFromName, fleet_report, vehicles
 	    use module Subscriptions
 	    use module io.picolabs.pico alias wrangler
@@ -44,7 +44,7 @@ ruleset manage_fleet {
 			relevant_vehicles = Subscriptions:getSubscriptions().filter(function(v){v{"attributes"}{"subscriber_role"} == "vehicle"});
 			relevant_vehicles
 		}
-		
+
 		fleet_report = function(){
 			relevant_subs = vehicles();
 			report = relevant_subs.map(function(v){
@@ -70,7 +70,16 @@ ruleset manage_fleet {
 			len = ent:reports.keys().length();
 			reports = 
 				(len <= 5) => ent:reports
-                   | {}.push(ent:reports{ent:reports.keys()[len]}).push(ent:reports{ent:reports.keys()[len-1]}).push(ent:reports{ent:reports.keys()[len-2]}).push(ent:reports{ent:reports.keys()[len-3]}).push(ent:reports{ent:reports.keys()[len-4]})
+                   | {}.put(ent:reports.keys()[len-5],ent:reports{ent:reports.keys()[len-5]}).put(ent:reports.keys()[len-4],ent:reports{ent:reports.keys()[len-4]}).put(ent:reports.keys()[len-3],ent:reports{ent:reports.keys()[len-3]}).put(ent:reports.keys()[len-2],ent:reports{ent:reports.keys()[len-2]}).put(ent:reports.keys()[len-1],ent:reports{ent:reports.keys()[len-1]})
+		}
+
+		highest_report_num = function(){
+			len = ent:reports.keys().length();
+			keys = ent:reports.keys();
+			lastkey = ent:reports.keys()[len-1].defaultsTo("0_0");
+			report_num = lastkey.split(re#_#)[1];
+			report_num.klog("HIGHEST REPORT NUM");
+			report_num
 		}
 	}
 
@@ -88,7 +97,7 @@ ruleset manage_fleet {
   		} else {
   		vehicle_name.klog("this is the vehicle name:");
     		raise pico event "new_child_request"
-      			attributes { "dname": nameFromName(vehicle_name), "color": "#FF69B4", "vehicle_name" : vehicle_name }
+      			attributes { "dname": nameFromName(vehicle_name), "color": "#FF69B4", "vehicle_name" : vehicle_name}
   		}
 	}
 
@@ -109,7 +118,7 @@ ruleset manage_fleet {
      					"vehicle_name": vehicle_name } } )
 		fired {
 	    	ent:vehicles := ent:vehicles.defaultsTo({});
-	    	ent:vehicles{[vehicle_name]} := the_vehicle
+	    	ent:vehicles{[vehicle_name]} := th/e_vehicle
 	 	}
 	}
 
@@ -179,14 +188,15 @@ ruleset manage_fleet {
 		foreach vehicles() setting(vehicle)
 		pre{
 			child_eci = vehicle{"attributes"}{"subscriber_eci"}
+			report_num = highest_report_num().as("Number") + 1
 		}
-		if child_eci.klog("sending event to child: ")
+		if report_num.klog("sending event to child with report num: ")
 			then
 				event:send(
    					{ "eci": child_eci, "eid": "fleet request",
    					"domain": "report", "type": "request",
-   					"attrs": { "name": "report_request" } } )
-	}
+   					"attrs": { "name": "report_request", "report_num" : report_num } } )
+	} 
 
 	rule report_incoming {
 		select when child reporting
@@ -221,7 +231,7 @@ ruleset manage_fleet {
 	rule collection_empty {
   		select when collection empty
   		always {
-    		ent:vehicles := {}
+    		ent:reports := clear_reports
   		}
 	}
 

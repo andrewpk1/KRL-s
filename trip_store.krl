@@ -48,7 +48,7 @@ ruleset trip_store {
 			child_eci = wrangler:myself().eci
 			parent_eci = wrangler:parent().eci
 			myTrips = trips()
-			seq = ent:seq{["_0","seq"]}
+			seq = event:attr("report_num")
 			cor_id = wrangler:myself().eci + "_" + seq.defaultsTo("0".as("Number"), "defaulting to 0")
 		}
 		if cor_id.klog("request sent from this cor_id: ")
@@ -56,11 +56,7 @@ ruleset trip_store {
 				event:send(
    					{ "eci": parent_eci, "eid": "returning report",
      				"domain": "child", "type": "reporting",
-     				"attrs": { "cor_id": cor_id, "trips" : myTrips} } )
-        always{
-        	ent:seq := ent:seq.defaultsTo("clear_seq", "initializing sequence");
-        	ent:seq{["_0","seq"]} := ent:seq{["_0","seq"]} + 1 
-        }                              
+     				"attrs": { "cor_id": cor_id, "trips" : myTrips} } )                          
 	}
 
 	rule collect_trips{
